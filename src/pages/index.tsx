@@ -7,6 +7,8 @@ import { RouterOutputs, api } from "~/utils/api";
 import dayjs from "dayjs";
 import relativeTime from "dayjs/plugin/relativeTime";
 import Image from "next/image";
+import Loading from "~/components/loading";
+import { useEffect } from "react";
 dayjs.extend(relativeTime);
 
 const CreatePostWizard = () => {
@@ -52,12 +54,26 @@ const PostView = (props: PostWithUser) => {
   );
 };
 
-const Home: NextPage = () => {
-  const user = useUser();
-  const { data, isLoading } = api.posts.getAll.useQuery();
+const Feed = () => {
+  const { data, isLoading: postsLoadeded } = api.posts.getAll.useQuery();
+  if (!data) {
+    return <Loading />;
+  }
+  return (
+    <div>
+      {data?.map((fullpost) => (
+        <PostView {...fullpost} key={fullpost.post.id} />
+      ))}
+    </div>
+  );
+};
 
-  if (isLoading) return <div>Loading...</div>;
-  if (!data) return <div>Not found</div>;
+const Home: NextPage = () => {
+  const { isLoaded: userLoaded, isSignedIn } = useUser();
+
+  //fetch immediatly
+  api.posts.getAll.useQuery();
+  //return empty div if both arent loaded since user tends to load faster;
 
   return (
     <>
@@ -70,14 +86,10 @@ const Home: NextPage = () => {
         <div className="w-full border-x md:max-w-2xl">
           <div className="flex border-b border-white p-4">
             <CreatePostWizard />
-            {!user.isSignedIn && <SignInButton />}
-            {!!user.isSignedIn && <SignOutButton />}
+            {!isSignedIn && <SignInButton />}
+            {isSignedIn && <SignOutButton />}
           </div>
-          <div>
-            {data?.map((fullpost) => (
-              <PostView {...fullpost} key={fullpost.post.id} />
-            ))}
-          </div>
+          {isSignedIn && <Feed />}
         </div>
       </main>
     </>
